@@ -1,0 +1,104 @@
+# =============================================================================
+# Component 3: Configuration
+# Multimodal Disease Severity Assessment & Temporal Progression Forecasting
+# =============================================================================
+
+# Reproducibility
+seed: 42
+
+# Image Processing
+image_size: [256, 256]  # Configurable to [512, 512] for higher-resolution runs
+
+# Disease Assessment Scales
+# ---------------------------------------------------------------------------
+# Stover-Gauhl / Pinzon-Nunez Standard Area Diagram bands for Sigatoka
+# Grade boundaries: [0] = 0%, (0,5] = Grade 1, (5,13] = Grade 2, etc.
+stover_gauhl_bands: [0.0, 5.0, 13.0, 23.0, 40.0, 65.0, 100.0]
+
+# Horsfall-Barratt / EPPO bands for Cordana
+horsfall_barratt_bands: [0.0, 5.0, 15.0, 30.0, 50.0, 100.0]
+horsfall_barratt_scores: [0.0, 20.0, 40.0, 60.0, 80.0, 100.0]
+
+# BBTV Morphometric Constants
+bbtv_healthy_aspect_ratio: 3.5
+bbtv_min_aspect_ratio: 1.5
+
+# Cordana Impact Weights
+cordana_weights:
+  horsfall_barratt: 0.65
+  coalescence: 0.20
+  lesion_count: 0.15
+  coalescence_scale: 2.5
+  max_lesion_count_norm: 20.0
+
+# Severity Category Thresholds (Section 2.2)
+# ---------------------------------------------------------------------------
+# Validated against proposal example: score 72.0 maps to "High"
+severity_thresholds:
+  low_max: 20.0        # [0, 20) = Low
+  moderate_max: 50.0    # [20, 50) = Moderate
+  high_max: 75.0        # [50, 75) = High  ← 72.0 maps here
+                        # [75, 100] = Critical
+
+# Multimodal Fusion Weights (Section 2.1)
+# ---------------------------------------------------------------------------
+fusion:
+  weighted_sum:
+    w_impact: 0.45
+    w_scope: 0.35
+    w_urgency: 0.20
+  damped_hybrid:
+    w_impact: 0.55
+    w_scope: 0.45
+    env_floor: 0.70
+    env_scale: 0.30
+
+# Temporal Progression (Section 2.3)
+# ---------------------------------------------------------------------------
+# OLS slope scaled to 7 days; ±epsilon band defines Stable zone
+trend_tolerance_band_7d: 3.0  # points per 7 days
+
+# GRU Forecaster Hyperparameters
+gru:
+  input_size: 5
+  hidden_size: 32
+  num_layers: 1
+  learning_rate: 0.001
+  epochs: 50
+  batch_size: 16
+
+# Data Splitting (Section 3.8)
+# ---------------------------------------------------------------------------
+# Strict plant-level splitting — no data leakage across splits
+split_ratios:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+
+# Synthetic Data Generation (Section 4)
+# ---------------------------------------------------------------------------
+synthetic:
+  num_plants: 120
+  num_zones: 4
+  num_timepoints: 6           # Weekly: t = 0, 7, 14, 21, 28, 35 days
+  expert_noise_sigma: 4.2     # Stover-Gauhl visual estimation error (%)
+  min_lesion_pixels: 5        # Noise threshold for connected components
+
+# Segmentation Training
+# ---------------------------------------------------------------------------
+segmentation:
+  unet_epochs: 12
+  unet_learning_rate: 0.001
+  unet_batch_size: 8
+  dice_weight: 0.5
+  ce_weight: 0.5
+
+# XGBoost Hyperparameters
+# ---------------------------------------------------------------------------
+xgboost:
+  n_estimators: 200
+  max_depth: 6
+  learning_rate: 0.1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
