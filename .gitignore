@@ -1,0 +1,22 @@
+# Component 1 Python environment
+component-1/.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.py[cod]
+
+# Component 1 datasets
+component-1/data/raw/
+component-1/data/processed/
+component-1/data/train/
+component-1/data/validation/
+component-1/data/test/
+
+# Trained models
+component-1/models/*.pt
+component-1/models/*.pth
+component-1/models/*.onnx
+
+# Jupyter
+.ipynb_checkpoints/
