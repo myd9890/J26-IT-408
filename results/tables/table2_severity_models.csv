@@ -1,0 +1,7 @@
+Model,Features_Used,Test_RMSE,Test_MAE,Test_R2,Spearman_Rho
+XGBoost Regressor (Ours),8 Multimodal Features,0.845,0.6135,0.9983,0.9957
+Random Forest Regressor,8 Multimodal Features,1.1513,0.8005,0.9968,0.9974
+Support Vector Regressor (SVR),8 Multimodal Features,0.2513,0.1595,0.9998,0.9976
+Rule-Based Stover-Gauhl,Biological Impact (I),25.4308,20.0394,-0.5679,0.9654
+Ablation: Image-Only,7 Visual Features (No Urgency),2.4241,1.7912,0.9858,0.968
+Ablation: Climate-Only,Urgency Score (U) Only,33.907,26.1555,-1.7872,0.0881

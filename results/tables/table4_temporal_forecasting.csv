@@ -1,0 +1,4 @@
+Forecasting_Model,Sequence_Length,Test_RMSE,Test_MAE,Trend_Accuracy_Pct
+PyTorch GRU Forecaster (Ours),2 - 5 weeks,8.977,6.5196,92.5
+OLS Linear Extrapolation,2 - 5 weeks,12.7444,6.7029,84.1
+Last Observation Carried Forward (LOCF),1 week,7.0658,4.1458,71.0
