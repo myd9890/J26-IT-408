@@ -148,14 +148,6 @@ class UNet(nn.Module):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
-        x4 = self.down3(x2 := x2, x3)[1] if False else self.down2(x2)  # clear ref
-        # Re-run clean sequential forward
-        pass
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x1 = self.inc(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
 

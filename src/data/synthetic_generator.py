@@ -25,7 +25,8 @@ from PIL import Image
 from src.schemas.contracts import DiseaseType, SeverityCategory, ProgressionTrend
 
 # Constants & Paths
-SYNTHETIC_DIR = r"d:\assignments\banana\banana_severity_c3\data\synthetic"
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+SYNTHETIC_DIR = os.path.join(PROJECT_ROOT, "data", "synthetic")
 IMAGES_DIR = os.path.join(SYNTHETIC_DIR, "images")
 MASKS_DIR = os.path.join(SYNTHETIC_DIR, "masks")
 METADATA_PATH = os.path.join(SYNTHETIC_DIR, "metadata.csv")
