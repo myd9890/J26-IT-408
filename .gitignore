@@ -13,6 +13,11 @@ dataset_analysis.md
 data/raw/
 data/processed/
 data/synthetic/
+data/real_seg/
+data/processed_masks/
+scratch/
+*.log
+*conv*.txt
 *.zip
 *.rar
 *.tar
