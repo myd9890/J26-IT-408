@@ -53,7 +53,7 @@ class Component3Orchestrator:
 
     def __init__(
         self,
-        unet_weights_path: Optional[str] = "results/unet_weights.pt",
+        unet_weights_path: Optional[str] = None,
         xgboost_model_path: Optional[str] = "results/xgboost_model.json",
         gru_weights_path: Optional[str] = "results/gru_forecaster.pt",
         db_path: str = DEFAULT_DB_PATH,
@@ -64,7 +64,13 @@ class Component3Orchestrator:
         else:
             self.device = torch.device(device)
 
-        # 1. Segmentation model
+        # 1. Segmentation model: prefer real weights if available, otherwise synthetic
+        if unet_weights_path is None:
+            if os.path.exists("results/unet_real_weights.pt"):
+                unet_weights_path = "results/unet_real_weights.pt"
+            elif os.path.exists("results/unet_weights.pt"):
+                unet_weights_path = "results/unet_weights.pt"
+
         self.unet: Optional[UNet] = None
         self.classical_baseline = ClassicalSegmenter()
 
@@ -92,6 +98,7 @@ class Component3Orchestrator:
         """Loads and resolves image to 256x256 RGB numpy array."""
         candidates = [
             image_path,
+            os.path.join("data/real_seg", image_path),
             os.path.join("data/synthetic", image_path),
             os.path.join("data/processed", image_path),
         ]

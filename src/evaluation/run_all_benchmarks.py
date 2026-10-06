@@ -311,6 +311,7 @@ def generate_table4_temporal_benchmarks(test_df: pd.DataFrame) -> pd.DataFrame:
             gru_preds.append(np.clip(p, 0.0, 100.0))
 
     targets_np = np.array(targets)
+    last_vals = np.array([float(seq[-1, 0]) * 100.0 for seq in seqs])
 
     def calc_rmse_mae(preds):
         p_np = np.array(preds)
@@ -318,14 +319,28 @@ def generate_table4_temporal_benchmarks(test_df: pd.DataFrame) -> pd.DataFrame:
         m = float(mean_absolute_error(targets_np, p_np))
         return round(r, 4), round(m, 4)
 
+    def calc_trend_acc(preds, band: float = 3.0):
+        # 3-State categorical trend (Worsening: delta > band, Improving: delta < -band, Stable: within band)
+        # Matches the agronomic criteria in src.temporal.trend_classifier
+        p_np = np.array(preds)
+        diff_true = targets_np - last_vals
+        diff_pred = p_np - last_vals
+        cat_true = np.where(diff_true > band, 1, np.where(diff_true < -band, -1, 0))
+        cat_pred = np.where(diff_pred > band, 1, np.where(diff_pred < -band, -1, 0))
+        return round(float(np.mean(cat_pred == cat_true)) * 100.0, 1)
+
     r_gru, m_gru = calc_rmse_mae(gru_preds)
     r_ols, m_ols = calc_rmse_mae(ols_preds)
     r_locf, m_locf = calc_rmse_mae(locf_preds)
 
+    acc_gru = calc_trend_acc(gru_preds)
+    acc_ols = calc_trend_acc(ols_preds)
+    acc_locf = calc_trend_acc(locf_preds)
+
     rows = [
-        {"Forecasting_Model": "PyTorch GRU Forecaster (Ours)", "Sequence_Length": "2 - 5 weeks", "Test_RMSE": r_gru, "Test_MAE": m_gru, "Trend_Accuracy_Pct": 92.5},
-        {"Forecasting_Model": "OLS Linear Extrapolation", "Sequence_Length": "2 - 5 weeks", "Test_RMSE": r_ols, "Test_MAE": m_ols, "Trend_Accuracy_Pct": 84.1},
-        {"Forecasting_Model": "Last Observation Carried Forward (LOCF)", "Sequence_Length": "1 week", "Test_RMSE": r_locf, "Test_MAE": m_locf, "Trend_Accuracy_Pct": 71.0},
+        {"Forecasting_Model": "PyTorch GRU Forecaster (Ours)", "Sequence_Length": "2 - 5 weeks", "Test_RMSE": r_gru, "Test_MAE": m_gru, "Trend_Accuracy_Pct": acc_gru},
+        {"Forecasting_Model": "OLS Linear Extrapolation", "Sequence_Length": "2 - 5 weeks", "Test_RMSE": r_ols, "Test_MAE": m_ols, "Trend_Accuracy_Pct": acc_ols},
+        {"Forecasting_Model": "Last Observation Carried Forward (LOCF)", "Sequence_Length": "1 week", "Test_RMSE": r_locf, "Test_MAE": m_locf, "Trend_Accuracy_Pct": acc_locf},
     ]
 
     t4_df = pd.DataFrame(rows)
