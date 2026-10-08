@@ -20,3 +20,20 @@ component-1/models/*.onnx
 
 # Jupyter
 .ipynb_checkpoints/
+
+
+
+
+# Component 3 Python environment
+component-3/.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.py[cod]
+
+# Component 3 datasets
+component-3/data/raw/
+component-3/data/processed/
+
+component-3/data/raw_metadata.csv
