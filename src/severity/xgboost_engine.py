@@ -27,6 +27,8 @@ from src.severity.fusion_strategies import (
     fusion_damped_hybrid,
     map_score_to_category,
 )
+from src.evaluation.expert_simulator import AgroExpertSimulator
+from src.utils.config import get_config
 
 FEATURE_NAMES = [
     "impact_score",
@@ -153,7 +155,7 @@ def extract_features_from_dataframe(df: pd.DataFrame) -> Tuple[np.ndarray, np.nd
     X_rows = []
     y_vals = []
 
-    for _, row in df.iterrows():
+    for row_idx, row in df.iterrows():
         disease_str = str(row["disease_label"]).lower()
         try:
             disease_enum = DiseaseType(disease_str)
@@ -190,11 +192,16 @@ def extract_features_from_dataframe(df: pd.DataFrame) -> Tuple[np.ndarray, np.nd
         )
         X_rows.append(vec)
 
-        # Target severity: use column if present and non-zero, otherwise compute hybrid fusion
+        # Target severity: use ground truth if present; otherwise simulate expert inspection rating
         if "severity_score" in row and not pd.isna(row["severity_score"]) and float(row["severity_score"]) > 0.0:
             target_sev = float(row["severity_score"])
+        elif "expert_severity" in row and not pd.isna(row["expert_severity"]) and float(row["expert_severity"]) > 0.0:
+            target_sev = float(row["expert_severity"])
         else:
-            target_sev = fusion_damped_hybrid(impact, scope_pct, urgency_score)
+            base_sev = fusion_damped_hybrid(impact, scope_pct, urgency_score)
+            s_idx = int(row_idx) if isinstance(row_idx, (int, np.integer)) else 42
+            sim = AgroExpertSimulator(sigma_noise=4.2, seed=42 + (s_idx % 1000))
+            target_sev = sim.simulate_expert_rating(base_sev)
         y_vals.append(target_sev)
 
     X = np.vstack(X_rows).astype(np.float32)
@@ -205,11 +212,11 @@ def extract_features_from_dataframe(df: pd.DataFrame) -> Tuple[np.ndarray, np.nd
 def train_xgboost(
     metadata_path: str = "data/synthetic/metadata.csv",
     output_model_path: str = "results/xgboost_model.json",
-    n_estimators: int = 200,
-    max_depth: int = 6,
-    learning_rate: float = 0.1,
-    subsample: float = 0.8,
-    colsample_bytree: float = 0.8,
+    n_estimators: Optional[int] = None,
+    max_depth: Optional[int] = None,
+    learning_rate: Optional[float] = None,
+    subsample: Optional[float] = None,
+    colsample_bytree: Optional[float] = None,
     seed: int = 42
 ) -> Dict[str, Any]:
     """
@@ -225,6 +232,12 @@ def train_xgboost(
         Dictionary of performance metrics (RMSE, MAE, R2) for train and test splits,
         plus comparison against mathematical baselines F_mult, F_WS, F_hybrid.
     """
+    n_estimators = n_estimators or int(get_config("xgboost.n_estimators", 200))
+    max_depth = max_depth or int(get_config("xgboost.max_depth", 6))
+    learning_rate = learning_rate or float(get_config("xgboost.learning_rate", 0.1))
+    subsample = subsample or float(get_config("xgboost.subsample", 0.8))
+    colsample_bytree = colsample_bytree or float(get_config("xgboost.colsample_bytree", 0.8))
+
     if not os.path.exists(metadata_path):
         raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
 
