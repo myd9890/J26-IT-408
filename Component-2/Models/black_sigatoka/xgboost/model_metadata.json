@@ -1,0 +1,74 @@
+{
+  "model_type": "XGBoost Regressor",
+  "selected_parameters": {
+    "objective": "reg:squarederror",
+    "subsample": 1.0,
+    "colsample_bytree": 1.0,
+    "random_state": 42,
+    "n_jobs": -1,
+    "tree_method": "hist",
+    "n_estimators": 200,
+    "max_depth": 5,
+    "learning_rate": 0.05,
+    "min_child_weight": 1
+  },
+  "features": [
+    "air_temp_c",
+    "estimated_leaf_wet",
+    "consecutive_wetness_hours"
+  ],
+  "target": "risk_score",
+  "training_metrics": {
+    "MAE": 0.3656048351531733,
+    "RMSE": 0.5894704325816976,
+    "R2": 0.9997501595397768
+  },
+  "validation_metrics": {
+    "MAE": 0.49751645094141467,
+    "RMSE": 0.8823158380600651,
+    "R2": 0.9994722401726407
+  },
+  "category_metrics": {
+    "accuracy": 0.8996798292422625,
+    "macro_precision": 0.8962178806524135,
+    "macro_recall": 0.9250209966405375,
+    "macro_f1": 0.8928166986690411,
+    "weighted_f1": 0.9042839803260285,
+    "per_category_f1": {
+      "No Risk": 0.8402154398563735,
+      "Low": 0.7458563535911602,
+      "Moderate": 0.9892933618843683,
+      "High": 0.9959016393442623
+    }
+  },
+  "risk_category_thresholds": {
+    "No Risk": "score == 0",
+    "Low": "0 < score < 25",
+    "Moderate": "25 <= score < 75",
+    "High": "75 <= score <= 100"
+  },
+  "out_of_range_validation_predictions": {
+    "count": 252,
+    "minimum": -0.067133828997612,
+    "maximum": 100.2566146850586
+  },
+  "library_versions": {
+    "xgboost": "3.4.1",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "scikit_learn": "1.9.1",
+    "joblib": "1.6.0"
+  },
+  "dataset_files": {
+    "train": "datasets/black_sigatoka/revised_splits/BS_SOURCE_TIME_train.csv",
+    "validation": "datasets/black_sigatoka/revised_splits/BS_SOURCE_TIME_validation.csv",
+    "test_dataset_loaded": false
+  },
+  "limitations": [
+    "Risk scores are mathematically generated synthetic labels, not verified Black Sigatoka infections.",
+    "The upstream label-generating function is unavailable.",
+    "Six identical three-feature combinations have small score differences.",
+    "NASA-derived weather differs from the synthetic training distribution.",
+    "This is current environmental risk scoring, not validated future disease forecasting."
+  ]
+}

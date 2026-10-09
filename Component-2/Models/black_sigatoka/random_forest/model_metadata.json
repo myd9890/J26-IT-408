@@ -1,0 +1,64 @@
+{
+  "disease": "Black Sigatoka",
+  "model_type": "sklearn.ensemble.RandomForestRegressor",
+  "feature_order": [
+    "air_temp_c",
+    "estimated_leaf_wet",
+    "consecutive_wetness_hours"
+  ],
+  "target": "risk_score",
+  "selected_model": "Tuned Random Forest",
+  "selected_parameters": {
+    "n_estimators": 300,
+    "max_depth": null,
+    "min_samples_leaf": 1,
+    "max_features": 1.0,
+    "random_state": 42,
+    "n_jobs": -1
+  },
+  "model_development_purpose": "Imitate research-informed synthetic environmental risk scores for a preliminary baseline.",
+  "source_datasets": {
+    "training": "datasets/black_sigatoka/revised_splits/BS_SOURCE_TIME_train.csv",
+    "validation": "datasets/black_sigatoka/revised_splits/BS_SOURCE_TIME_validation.csv"
+  },
+  "row_counts": {
+    "train": 4501,
+    "validation": 937
+  },
+  "training_metrics": {
+    "mae": 0.12274103482558914,
+    "rmse": 0.2517337908081329,
+    "r2": 0.9999544360097034
+  },
+  "validation_metrics": {
+    "mae": 0.36331458745998196,
+    "rmse": 0.7543383580948598,
+    "r2": 0.999614237006588
+  },
+  "baseline_validation_metrics": {
+    "mae": 0.3656574236125967,
+    "rmse": 0.7543675391899745,
+    "r2": 0.9996142071600232
+  },
+  "dummy_validation_metrics": {
+    "mae": 34.73765394304646,
+    "rmse": 38.438478158841,
+    "r2": -0.0016605015681960822
+  },
+  "risk_category_thresholds": {
+    "No Risk": "score == 0",
+    "Low": "0 < score < 25",
+    "Moderate": "25 <= score < 75",
+    "High": "75 <= score <= 100"
+  },
+  "library_versions": {
+    "python": "3.13.7",
+    "scikit_learn": "1.9.1",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "joblib": "1.6.0"
+  },
+  "synthetic_label_limitation": "Labels are mathematical risk scores, not confirmed infection outcomes; model metrics measure synthetic label imitation.",
+  "test_partition_loaded_for_modeling": false,
+  "test_csv_hashed_for_integrity_only": true
+}
