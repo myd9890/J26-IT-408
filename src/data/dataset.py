@@ -129,23 +129,39 @@ class BananaSegmentationDataset(Dataset):
             mask_np = np.clip(mask_np, 0, 2)
             mask_tensor = torch.from_numpy(mask_np)  # Shape (H, W)
 
-        # Apply spatial-only data augmentations during training
+        # Apply comprehensive spatial and photometric augmentations during training
         if self.is_training:
-            # Random horizontal flip
+            # 1. Random horizontal flip
             if torch.rand(1).item() > 0.5:
                 img_tensor = TF.hflip(img_tensor)
                 mask_tensor = TF.hflip(mask_tensor)
 
-            # Random vertical flip
+            # 2. Random vertical flip
             if torch.rand(1).item() > 0.5:
                 img_tensor = TF.vflip(img_tensor)
                 mask_tensor = TF.vflip(mask_tensor)
 
-            # Random 90-degree rotation
+            # 3. Random 90-degree orthogonal rotation
             if torch.rand(1).item() > 0.5:
                 rot_k = int(torch.randint(1, 4, (1,)).item())
                 img_tensor = torch.rot90(img_tensor, k=rot_k, dims=[1, 2])
                 mask_tensor = torch.rot90(mask_tensor, k=rot_k, dims=[0, 1])
+
+            # 4. Color Jitter: slight brightness, contrast, and saturation variations
+            if torch.rand(1).item() > 0.5:
+                bright_factor = float(torch.empty(1).uniform_(0.85, 1.15).item())
+                contrast_factor = float(torch.empty(1).uniform_(0.85, 1.15).item())
+                sat_factor = float(torch.empty(1).uniform_(0.85, 1.15).item())
+                img_tensor = TF.adjust_brightness(img_tensor, bright_factor)
+                img_tensor = TF.adjust_contrast(img_tensor, contrast_factor)
+                img_tensor = TF.adjust_saturation(img_tensor, sat_factor)
+
+            # 5. Stochastic Gaussian Blur: simulates camera lens defocus on field photography
+            if torch.rand(1).item() > 0.7:
+                img_tensor = TF.gaussian_blur(img_tensor, kernel_size=[3, 3], sigma=[0.2, 0.8])
+
+            # Clamp image tensor values to valid [0.0, 1.0] range
+            img_tensor = torch.clamp(img_tensor, 0.0, 1.0)
 
         meta_dict = row.to_dict()
         return img_tensor, mask_tensor, meta_dict

@@ -23,11 +23,14 @@ from src.data.dataset import plant_level_split
 from src.severity.impact_calculators import calculate_disease_impact
 from src.severity.fusion_strategies import map_score_to_category, fusion_damped_hybrid
 from src.severity.xgboost_engine import DISEASE_TO_ID
+from src.evaluation.expert_simulator import AgroExpertSimulator
+from src.utils.config import get_config
 
 
 class SeverityGRU(nn.Module):
     """
     Recurrent neural network with GRU cell for 7-day severity progression forecasting.
+    Includes proper sequence-length masking to prevent padding contamination.
     """
 
     def __init__(self, input_size: int = 5, hidden_size: int = 32, num_layers: int = 1):
@@ -43,22 +46,30 @@ class SeverityGRU(nn.Module):
             batch_first=True
         )
         self.head = nn.Sequential(
-            nn.Linear(hidden_size, 16),
+            nn.Linear(hidden_size, 20),
             nn.ReLU(),
-            nn.Linear(16, 1),
+            nn.Linear(20, 1),
             nn.Sigmoid()  # Guarantees normalized output in [0.0, 1.0]
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, lengths: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Args:
             x: Tensor of shape (B, seq_len, input_size) with values in [0.0, 1.0].
+            lengths: Optional 1D LongTensor of valid sequence lengths in the batch.
+                     If provided, extracts the hidden state at the true final observation,
+                     avoiding trailing zero-padding pollution.
 
         Returns:
             Normalized predictions of shape (B, 1) in [0.0, 1.0].
         """
         out, _ = self.gru(x)
-        last_hidden = out[:, -1, :]  # (B, hidden_size)
+        if lengths is not None:
+            batch_idx = torch.arange(x.size(0), device=x.device)
+            valid_idx = torch.clamp(lengths.to(x.device) - 1, min=0)
+            last_hidden = out[batch_idx, valid_idx, :]
+        else:
+            last_hidden = out[:, -1, :]  # (B, hidden_size)
         pred_norm = self.head(last_hidden)  # (B, 1)
         return pred_norm
 
@@ -122,8 +133,12 @@ def build_sequences_from_df(
 
             if "severity_score" in r and not pd.isna(r["severity_score"]) and float(r["severity_score"]) > 0.0:
                 sev = float(r["severity_score"])
+            elif "expert_severity" in r and not pd.isna(r["expert_severity"]) and float(r["expert_severity"]) > 0.0:
+                sev = float(r["expert_severity"])
             else:
-                sev = fusion_damped_hybrid(impact, scope, urg)
+                base_sev = fusion_damped_hybrid(impact, scope, urg)
+                sim = AgroExpertSimulator(sigma_noise=4.2, seed=int(r.get("timepoint_idx", 0)) + 42)
+                sev = sim.simulate_expert_rating(base_sev)
 
             severity_list.append(sev)
             vec = [sev / 100.0, urg / 100.0, scope / 100.0, impact / 100.0, dis_id]
@@ -140,7 +155,7 @@ def build_sequences_from_df(
 
 
 def pad_collate_fn(batch):
-    """Pads sequences of variable length in the batch."""
+    """Pads sequences of variable length in the batch and tracks true valid lengths."""
     sequences, targets = zip(*batch)
     lengths = [len(seq) for seq in sequences]
     max_len = max(lengths)
@@ -152,20 +167,27 @@ def pad_collate_fn(batch):
         padded_seqs[i, :len(seq), :] = seq
 
     targets_tensor = torch.stack(targets, dim=0)
-    return padded_seqs, targets_tensor
+    lengths_tensor = torch.tensor(lengths, dtype=torch.long)
+    return padded_seqs, targets_tensor, lengths_tensor
 
 
 def train_gru(
     metadata_path: str = "data/synthetic/metadata.csv",
     output_weights_path: str = "results/gru_forecaster.pt",
-    epochs: int = 40,
-    batch_size: int = 16,
-    lr: float = 0.002,
+    epochs: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    lr: Optional[float] = None,
+    hidden_size: Optional[int] = None,
     seed: int = 42
 ) -> Dict[str, Any]:
     """
     Trains the SeverityGRU on plant-level partitioned longitudinal sequences.
     """
+    epochs = epochs or int(get_config("gru.epochs", 50))
+    batch_size = batch_size or int(get_config("gru.batch_size", 16))
+    lr = lr or float(get_config("gru.learning_rate", 0.002))
+    hidden_size = hidden_size or int(get_config("gru.hidden_size", 32))
+
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -187,39 +209,63 @@ def train_gru(
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)
 
-    model = SeverityGRU(input_size=5, hidden_size=32, num_layers=1)
+    model = SeverityGRU(input_size=5, hidden_size=hidden_size, num_layers=1)
     criterion = nn.MSELoss()
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
 
     best_val_loss = float("inf")
     os.makedirs(os.path.dirname(output_weights_path), exist_ok=True)
 
+    train_loss_history = []
+    val_loss_history = []
+
     for epoch in range(1, epochs + 1):
         model.train()
-        for seqs, targets in train_loader:
+        batch_losses = []
+        for seqs, targets, lengths in train_loader:
             optimizer.zero_grad()
-            preds = model(seqs)
+            preds = model(seqs, lengths=lengths)
             loss = criterion(preds, targets)
             loss.backward()
             optimizer.step()
+            batch_losses.append(loss.item())
+
+        scheduler.step()
+        train_loss_history.append(float(np.mean(batch_losses)))
 
         # Validation
         model.eval()
         val_losses = []
         with torch.no_grad():
-            for seqs, targets in val_loader:
-                preds = model(seqs)
+            for seqs, targets, lengths in val_loader:
+                preds = model(seqs, lengths=lengths)
                 loss = criterion(preds, targets)
                 val_losses.append(loss.item())
 
         mean_val_loss = float(np.mean(val_losses))
+        val_loss_history.append(mean_val_loss)
+
         if mean_val_loss < best_val_loss:
             best_val_loss = mean_val_loss
             torch.save({
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
-                "val_mse": best_val_loss
+                "val_mse": best_val_loss,
+                "hidden_size": hidden_size,
+                "input_size": 5
             }, output_weights_path)
+
+    # Save training history JSON for publication curve plotting
+    history_path = os.path.join(os.path.dirname(output_weights_path), "gru_training_history.json")
+    import json
+    with open(history_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "epochs": list(range(1, epochs + 1)),
+            "train_loss": train_loss_history,
+            "val_loss": val_loss_history,
+            "best_epoch": int(torch.load(output_weights_path, map_location="cpu", weights_only=False)["epoch"])
+        }, f, indent=2)
 
     # Evaluate on test set
     checkpoint = torch.load(output_weights_path, map_location="cpu", weights_only=False)
@@ -229,8 +275,8 @@ def train_gru(
     test_preds = []
     test_actuals = []
     with torch.no_grad():
-        for seqs, targets in test_loader:
-            preds = model(seqs)
+        for seqs, targets, lengths in test_loader:
+            preds = model(seqs, lengths=lengths)
             test_preds.extend((preds.squeeze(1) * 100.0).tolist())
             test_actuals.extend((targets.squeeze(1) * 100.0).tolist())
 
@@ -261,6 +307,8 @@ class GRUProgressionForecaster:
         self.is_loaded = False
         if model_path and os.path.exists(model_path):
             checkpoint = torch.load(model_path, map_location="cpu", weights_only=False)
+            h_size = checkpoint.get("hidden_size", 32)
+            self.model = SeverityGRU(input_size=5, hidden_size=h_size, num_layers=1)
             self.model.load_state_dict(checkpoint["model_state_dict"])
             self.model.eval()
             self.is_loaded = True

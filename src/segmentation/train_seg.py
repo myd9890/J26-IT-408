@@ -25,6 +25,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from src.data.dataset import plant_level_split, BananaSegmentationDataset
 from src.segmentation.unet import UNet
 from src.segmentation.loss_and_metrics import CombinedDiceCrossEntropyLoss, compute_segmentation_metrics
+from src.utils.config import get_config
 
 
 def train_unet(
@@ -32,17 +33,19 @@ def train_unet(
     base_dir: str = "data/synthetic",
     output_weights_path: str = "results/unet_weights.pt",
     history_path: str = "results/unet_training_history.json",
-    epochs: int = 10,
-    batch_size: int = 8,
-    learning_rate: float = 0.001,
-    base_filters: int = 32,
+    epochs: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    learning_rate: Optional[float] = None,
+    base_filters: Optional[int] = None,
+    patience: int = 5,
     device: Optional[str] = None,
     seed: int = 42,
     max_train_samples: Optional[int] = None,
     max_val_samples: Optional[int] = None
 ) -> Dict[str, Any]:
     """
-    Trains U-Net on the synthetic longitudinal cohort using plant-level partitioning.
+    Trains U-Net on the synthetic or real longitudinal cohort using plant-level partitioning.
+    Includes early stopping based on validation Macro Dice.
 
     Args:
         metadata_path: Path to dataset metadata CSV.
@@ -61,6 +64,11 @@ def train_unet(
     Returns:
         Dictionary containing training history and best validation metrics.
     """
+    epochs = epochs or int(get_config("segmentation.unet_epochs", 10))
+    batch_size = batch_size or int(get_config("segmentation.unet_batch_size", 8))
+    learning_rate = learning_rate or float(get_config("segmentation.unet_learning_rate", 0.001))
+    base_filters = base_filters or 32
+
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -113,6 +121,7 @@ def train_unet(
     }
 
     best_val_dice = -1.0
+    epochs_no_improve = 0
 
     print(f"[UNet Train] Starting training for {epochs} epochs...")
 
@@ -199,6 +208,7 @@ def train_unet(
         # Save checkpoint if best macro dice achieved
         if val_macro_dice > best_val_dice:
             best_val_dice = val_macro_dice
+            epochs_no_improve = 0
             history["best_epoch"] = epoch
             history["best_val_macro_dice"] = val_macro_dice
             torch.save({
@@ -209,6 +219,11 @@ def train_unet(
                 "base_filters": base_filters
             }, output_weights_path)
             print(f"  --> Saved new best checkpoint to {output_weights_path} (Macro Dice: {best_val_dice:.4f})", flush=True)
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print(f"[UNet Train] Early stopping triggered: no improvement for {patience} consecutive epochs.", flush=True)
+                break
 
     # Save training history JSON
     with open(history_path, "w", encoding="utf-8") as f:
