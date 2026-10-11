@@ -37,3 +37,4 @@ component-3/data/raw/
 component-3/data/processed/
 
 component-3/data/raw_metadata.csv
+*.png
