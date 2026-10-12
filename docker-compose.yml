@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  banana-severity-c3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: banana-severity-c3:latest
+    container_name: banana-severity-service
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
