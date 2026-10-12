@@ -7,4 +7,3 @@ __pycache__/
 htmlcov/
 .idea/
 .vscode/
-*.csv
