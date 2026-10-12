@@ -1,0 +1,6 @@
+zone_id,disease,confidence,risk,severity,urgency,chemical,labour,cost
+Z01,Black Sigatoka,0.92,82,78,90,3,2,3000
+Z02,Yellow Sigatoka,0.85,60,45,55,2,1,1800
+Z03,Cordana Leaf Spot,0.76,55,30,35,1,1,1200
+Z04,Black Sigatoka,0.95,90,92,95,4,3,4500
+Z05,Yellow Sigatoka,0.81,70,60,65,2,2,2300

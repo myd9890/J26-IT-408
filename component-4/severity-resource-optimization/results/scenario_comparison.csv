@@ -1,0 +1,5 @@
+Scenario,Selected Zones,Total Priority,Chemical Used,Labour Used,Cost
+Normal,"Z01, Z05, Z02",204.6,7.0,5.0,7100.0
+Chemical Shortage,"Z01, Z03",126.1,4.0,3.0,4200.0
+Labour Shortage,"Z01, Z02",138.5,5.0,3.0,4800.0
+Budget Shortage,"Z05, Z03",109.2,3.0,3.0,3500.0
