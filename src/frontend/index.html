@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banana Disease Multimodal Severity &amp; Progression Demo (Component 3)</title>
+  <meta name="description" content="Interactive demo dashboard for Multimodal Banana Disease Severity Assessment, U-Net Segmentation, and 7-Day GRU Progression Forecasting.">
+  
+  <!-- Modern Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Background Glow Accents -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    
+    <!-- Top Navigation Header -->
+    <header class="top-nav glass-card">
+      <div class="nav-brand">
+        <div class="brand-icon">🌿</div>
+        <div class="brand-titles">
+          <h1>Banana Foliar Severity &amp; Progression Engine</h1>
+          <p class="subtitle">Component 3 · Multimodal Agronomic Assessment &amp; 7-Day Forecasting Platform</p>
+        </div>
+      </div>
+      
+      <div class="nav-actions">
+        <div class="system-badge" id="system-status-badge">
+          <span class="status-pulse green" id="status-pulse-dot"></span>
+          <span class="status-text" id="status-text">Checking Models...</span>
+        </div>
+        <a href="/docs" target="_blank" class="docs-btn" title="Open FastAPI Interactive OpenAPI Docs">
+          <span>⚡ API Docs</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Quick Presets Showcase Bar -->
+    <section class="presets-section glass-card" aria-label="Demo Presets">
+      <div class="section-badge-row">
+        <span class="section-kicker">ONE-CLICK EVALUATOR PRESETS</span>
+        <span class="section-hint">Select a phytopathological case to populate field parameters instantly</span>
+      </div>
+      <div class="presets-carousel" id="presets-container">
+        <!-- Dynamically injected preset cards -->
+        <div class="preset-loading">Loading curated disease presets...</div>
+      </div>
+    </section>
+
+    <!-- Main 3-Column Diagnostic Dashboard -->
+    <main class="dashboard-grid">
+      
+      <!-- COLUMN 1: Inputs & Microclimate Controls -->
+      <section class="panel glass-card col-inputs" aria-label="Diagnostic Inputs">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-step">01</span>
+            <h2>Multimodal Inputs</h2>
+          </div>
+          <span class="panel-tag">C1 + C2 Contracts</span>
+        </div>
+
+        <form id="assessment-form" onsubmit="return false;">
+          
+          <!-- Plant & Zone Identifiers -->
+          <div class="form-row dual-fields">
+            <div class="form-group">
+              <label for="input-plant-id">Plant ID</label>
+              <input type="text" id="input-plant-id" value="REAL_PLANT_TR_001" required>
+            </div>
+            <div class="form-group">
+              <label for="input-zone-id">Zone ID</label>
+              <select id="input-zone-id">
+                <option value="ZONE_A" selected>ZONE A (North Plot)</option>
+                <option value="ZONE_B">ZONE B (Canal Plot)</option>
+                <option value="ZONE_C">ZONE C (Ridge Plot)</option>
+                <option value="ZONE_D">ZONE D (South Plot)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Disease & Vision Confidence -->
+          <div class="form-row dual-fields">
+            <div class="form-group">
+              <label for="input-disease">Component 1 Diagnosis</label>
+              <select id="input-disease">
+                <option value="black_sigatoka" selected>Black Sigatoka (Pseudocercospora fijiensis)</option>
+                <option value="yellow_sigatoka">Yellow Sigatoka (Pseudocercospora musae)</option>
+                <option value="cordana">Cordana Leaf Spot (Neocordana musae)</option>
+                <option value="bbtv">Banana Bunchy Top Virus (BBTV)</option>
+                <option value="healthy">Healthy Lamina (Control)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="input-confidence">C1 Confidence</label>
+              <input type="number" id="input-confidence" min="0.5" max="1.0" step="0.01" value="0.96">
+            </div>
+          </div>
+
+          <!-- Leaf Image Selection & Upload -->
+          <div class="form-group">
+            <label>Leaf Specimen Image</label>
+            <div class="upload-dropzone" id="upload-dropzone">
+              <input type="file" id="file-input" accept="image/jpeg,image/png" style="display: none;">
+              <div class="dropzone-content">
+                <span class="drop-icon">📷</span>
+                <span class="drop-text" id="drop-text">Click or drag image here</span>
+                <span class="drop-sub" id="drop-filename">Current: real_train_0001_172.jpg</span>
+              </div>
+            </div>
+            <input type="hidden" id="input-image-path" value="images/real_train_0001_172_jpeg.rf.94528c81ceec44f2e54c6a574fa3416a.jpg">
+          </div>
+
+          <!-- Component 2 Microclimate Urgency Slider -->
+          <div class="form-group slider-group">
+            <div class="slider-header">
+              <label for="input-urgency">C2 Weather Urgency ($U$)</label>
+              <span class="slider-val" id="urgency-val-display">75%</span>
+            </div>
+            <input type="range" id="input-urgency" min="0" max="100" value="75" class="custom-slider">
+            <div class="weather-micro-strip">
+              <span class="weather-pill">🌡️ <strong id="val-temp">28.5</strong>°C</span>
+              <span class="weather-pill">💧 <strong id="val-humidity">88</strong>% RH</span>
+              <span class="weather-pill">🍃 <strong id="val-wetness">12</strong>h Wet</span>
+              <span class="weather-pill">🌧️ <strong id="val-wetdays">4</strong>d Rain</span>
+            </div>
+          </div>
+
+          <!-- Fusion Strategy Selection -->
+          <div class="form-group">
+            <label>Multimodal Fusion Strategy (FR6)</label>
+            <div class="fusion-pills" id="fusion-selector">
+              <button type="button" class="fusion-btn active" data-strategy="F_hybrid" title="Damped Multiplicative Hybrid (Operational)">
+                <span class="f-name">F_hybrid</span>
+                <span class="f-sub">Safe Damped</span>
+              </button>
+              <button type="button" class="fusion-btn" data-strategy="F_XGB" title="Learned Gradient Boosting">
+                <span class="f-name">F_XGB</span>
+                <span class="f-sub">XGBoost ML</span>
+              </button>
+              <button type="button" class="fusion-btn" data-strategy="F_WS" title="Weighted Linear Sum">
+                <span class="f-name">F_WS</span>
+                <span class="f-sub">Linear Sum</span>
+              </button>
+              <button type="button" class="fusion-btn" data-strategy="F_mult" title="Unconstrained Multiplicative (Literature Baseline)">
+                <span class="f-name">F_mult</span>
+                <span class="f-sub">Multiplicative</span>
+              </button>
+            </div>
+            <input type="hidden" id="selected-fusion-method" value="F_hybrid">
+          </div>
+
+          <!-- Run Assessment Button -->
+          <button type="button" class="cta-btn" id="run-assessment-btn">
+            <span class="btn-spinner" id="btn-spinner" style="display: none;"></span>
+            <span class="btn-label" id="btn-label">✨ Run Multimodal Assessment</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- COLUMN 2: U-Net Semantic Segmentation & Morphometrics -->
+      <section class="panel glass-card col-segmentation" aria-label="Visual Segmentation">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-step">02</span>
+            <h2>Semantic Segmentation</h2>
+          </div>
+          <span class="panel-tag highlight-green">U-Net 3-Class (FR2)</span>
+        </div>
+
+        <!-- Dual Canvas Viewer -->
+        <div class="viewer-container">
+          <div class="canvas-viewport" id="viewport-box">
+            <canvas id="view-canvas" width="256" height="256"></canvas>
+            <div class="canvas-loader" id="canvas-loader" style="display: none;">
+              <div class="pulse-ring"></div>
+              <span>Segmenting foliar contours...</span>
+            </div>
+          </div>
+
+          <!-- Mask Opacity Slider -->
+          <div class="opacity-control-bar">
+            <div class="slider-header-sm">
+              <label for="mask-opacity-slider">Segmentation Overlay Blend</label>
+              <span id="opacity-label">85% Mask</span>
+            </div>
+            <input type="range" id="mask-opacity-slider" min="0" max="100" value="85" class="custom-slider sm">
+            <div class="opacity-markers">
+              <span>0% (Raw Leaf)</span>
+              <span>50% (Blend)</span>
+              <span>100% (Mask Only)</span>
+            </div>
+          </div>
+
+          <!-- Mask Color Legend -->
+          <div class="mask-legend">
+            <div class="legend-item">
+              <span class="legend-swatch swatch-green"></span>
+              <span class="legend-text">Healthy Lamina</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-crimson"></span>
+              <span class="legend-text">Necrotic Lesion</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch swatch-bg"></span>
+              <span class="legend-text">Background</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extracted Morphometrics Strip (FR3) -->
+        <div class="morphometrics-grid">
+          <div class="morpho-card">
+            <span class="morpho-label">Foliar Scope</span>
+            <span class="morpho-val" id="morph-scope">--%</span>
+            <span class="morpho-sub">Necrotic Ratio</span>
+          </div>
+          <div class="morpho-card">
+            <span class="morpho-label">Lesion Count</span>
+            <span class="morpho-val" id="morph-lesions">--</span>
+            <span class="morpho-sub">Distinct Contours</span>
+          </div>
+          <div class="morpho-card">
+            <span class="morpho-label">Coalescence</span>
+            <span class="morpho-val" id="morph-coalescence">--%</span>
+            <span class="morpho-sub">Merged Streaks</span>
+          </div>
+          <div class="morpho-card">
+            <span class="morpho-label">Aspect Ratio</span>
+            <span class="morpho-val" id="morph-aspect">--</span>
+            <span class="morpho-sub">L / W Metric</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 3: Decision Support & Longitudinal Forecast -->
+      <section class="panel glass-card col-decision" aria-label="Decision Support">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-step">03</span>
+            <h2>Decision &amp; Forecasting</h2>
+          </div>
+          <span class="panel-tag highlight-blue">GRU Forecaster (FR10)</span>
+        </div>
+
+        <!-- Severity Score Ring & Category Badge -->
+        <div class="severity-summary-card">
+          <div class="score-circle-wrap">
+            <svg class="score-ring-svg" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+              <circle class="ring-fg" id="score-ring-bar" cx="60" cy="60" r="50" stroke-dasharray="314.15" stroke-dashoffset="314.15"></circle>
+            </svg>
+            <div class="score-number-inside">
+              <span class="score-val" id="score-val-large">--</span>
+              <span class="score-unit">/ 100</span>
+            </div>
+          </div>
+          
+          <div class="severity-meta">
+            <div class="category-badge badge-neutral" id="category-badge">Awaiting Run</div>
+            <div class="standard-scale-pill" id="stover-grade-pill">Stover-Gauhl: Grade --</div>
+            <div class="impact-breakdown-sub" id="impact-sub">Biological Impact: -- · Urgency: --</div>
+          </div>
+        </div>
+
+        <!-- Actionable Agronomic Prescription (FR7, FR11) -->
+        <div class="prescription-card">
+          <div class="card-title-row">
+            <span class="rx-icon">📋</span>
+            <span class="rx-heading">Prescribed Intervention Protocol</span>
+          </div>
+          <p class="prescription-text" id="prescription-text">
+            Execute assessment to generate precision intervention instructions for Component 4.
+          </p>
+        </div>
+
+        <!-- 7-Day GRU Forecast Metric Card -->
+        <div class="forecast-card">
+          <div class="forecast-header">
+            <span class="fc-icon">🔮</span>
+            <span class="fc-title">7-Day Progression Forecast</span>
+            <span class="fc-confidence" id="confidence-flag-pill">Confidence: --</span>
+          </div>
+          <div class="forecast-body">
+            <div class="fc-stat">
+              <span class="fc-label">Projected Severity</span>
+              <span class="fc-val" id="forecast-score-val">--</span>
+            </div>
+            <div class="fc-stat">
+              <span class="fc-label">Projected Category</span>
+              <span class="fc-val-cat" id="forecast-cat-val">--</span>
+            </div>
+            <div class="fc-stat">
+              <span class="fc-label">Trajectory Trend</span>
+              <span class="fc-trend" id="progression-trend-val">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Longitudinal Trajectory Timeline Chart -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <span class="chart-title">Longitudinal Timeline &amp; Projection</span>
+            <span class="chart-rate" id="weekly-rate-pill">Rate: -- pts/7d</span>
+          </div>
+          <div class="canvas-chart-wrap">
+            <canvas id="timeline-chart" width="360" height="150"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM PANEL: Interactive Zero-Collapse Stress Test Lab -->
+    <section class="lab-section glass-card" aria-label="Zero-Collapse Stress Test Lab">
+      <div class="lab-header">
+        <div class="lab-title-group">
+          <span class="lab-badge">SCIENTIFIC INNOVATION SHOWCASE</span>
+          <h3>Zero-Collapse Stress Test Simulator</h3>
+          <p class="lab-subtitle">
+            Demonstrates how our <strong>Damped Multiplicative Hybrid ($F_{\text{hybrid}}$)</strong> avoids catastrophic false-negative diagnosis when environmental urgency $U \to 0$.
+          </p>
+        </div>
+        <div class="lab-slider-unit">
+          <label for="lab-urgency-slider">Simulate Weather Urgency: <strong id="lab-urgency-display">0%</strong></label>
+          <input type="range" id="lab-urgency-slider" min="0" max="100" value="0" class="custom-slider lab-slider">
+        </div>
+      </div>
+
+      <div class="lab-comparison-grid">
+        
+        <!-- Multiplicative Collapse Bar -->
+        <div class="lab-card card-fail">
+          <div class="lab-card-top">
+            <span class="method-tag tag-crimson">Unconstrained Multiplicative ($F_{\text{mult}}$)</span>
+            <span class="failure-indicator" id="fmult-status-tag">⚠️ CATASTROPHIC COLLAPSE</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill fill-crimson" id="bar-fmult" style="width: 0%;"></div>
+          </div>
+          <div class="bar-metric-row">
+            <span>Fused Severity Output:</span>
+            <strong id="lab-fmult-val">0.0 / 100</strong>
+          </div>
+          <p class="lab-critique">
+            When weather transmission drops to zero ($U=0$), pure multiplication crashes to 0% severity regardless of visible necrosis—a lethal false negative in plant pathology.
+          </p>
+        </div>
+
+        <!-- Damped Hybrid Safe Bar -->
+        <div class="lab-card card-safe">
+          <div class="lab-card-top">
+            <span class="method-tag tag-emerald">Damped Multiplicative Hybrid ($F_{\text{hybrid}}$)</span>
+            <span class="safe-indicator" id="fhybrid-status-tag">✅ 70% BIOLOGICAL FLOOR PRESERVED</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill fill-emerald" id="bar-fhybrid" style="width: 35%;"></div>
+          </div>
+          <div class="bar-metric-row">
+            <span>Fused Severity Output:</span>
+            <strong id="lab-fhybrid-val">35.0 / 100</strong>
+          </div>
+          <p class="lab-critique">
+            Our damped formulation strictly enforces:
+            <code>F_hybrid = I_disease × (0.70 + 0.30 × U / 100)</code>
+            retaining at least 70% of physical tissue damage even during extreme drought.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span>University ML &amp; Final-Year Project Demonstration · Component 3 Multimodal Severity Engine</span>
+      <span>Designed for Viva Evaluation &amp; Agricultural Field Deployment</span>
+    </footer>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

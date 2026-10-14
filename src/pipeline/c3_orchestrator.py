@@ -247,3 +247,158 @@ class Component3Orchestrator:
         )
 
         return output
+
+    def assess_interactive(
+        self,
+        c1_input: Component1Input,
+        c2_input: Component2Input,
+        fusion_method: str = "F_hybrid"
+    ) -> Dict[str, Any]:
+        """
+        Executes complete multimodal pipeline and returns rich visual assets (base64 image & mask),
+        morphometrics, multi-fusion strategy comparison, and longitudinal trajectory for UI display.
+        """
+        import io
+        import base64
+
+        # Step 1: Load image and predict mask
+        rgb_image = self._load_image(c1_input.image_path)
+        pred_mask = self._predict_mask(rgb_image)
+
+        # Step 2: Extract morphometric features
+        morph_feats = extract_leaf_and_lesion_features(pred_mask)
+
+        # Step 3: Disease-specific impact scoring
+        impact_score, stover_grade = calculate_disease_impact(
+            disease=c1_input.disease_label,
+            scope_pct=morph_feats.scope_pct,
+            num_lesions=morph_feats.num_lesions,
+            coalescence_ratio_pct=morph_feats.coalescence_ratio_pct,
+            morph_distortion_idx=morph_feats.morph_distortion_idx
+        )
+
+        # Step 4: Multimodal fusion and comparative evaluation across all 4 formulas
+        urgency = c2_input.urgency_score
+        f_hybrid = fusion_damped_hybrid(impact_score, morph_feats.scope_pct, urgency)
+        f_ws = fusion_weighted_sum(impact_score, morph_feats.scope_pct, urgency)
+        f_mult = fusion_multiplicative(impact_score, urgency, morph_feats.scope_pct)
+
+        feature_vec = assemble_feature_vector(
+            impact_score=impact_score,
+            scope_pct=morph_feats.scope_pct,
+            urgency_score=urgency,
+            disease=c1_input.disease_label,
+            num_lesions=morph_feats.num_lesions,
+            coalescence_ratio_pct=morph_feats.coalescence_ratio_pct,
+            morph_distortion_idx=morph_feats.morph_distortion_idx,
+            leaf_aspect_ratio=morph_feats.leaf_aspect_ratio
+        )
+        if self.xgb_engine.model is not None:
+            f_xgb = self.xgb_engine.predict(feature_vec)
+        else:
+            f_xgb = f_hybrid
+
+        if fusion_method == "F_mult":
+            severity_score = f_mult
+        elif fusion_method == "F_WS":
+            severity_score = f_ws
+        elif fusion_method == "F_XGB":
+            severity_score = f_xgb
+        else:
+            severity_score = f_hybrid
+            fusion_method = "F_hybrid"
+
+        # Step 5: Severity category & prescription
+        severity_category = map_score_to_category(severity_score)
+        recommended_action = get_recommended_action(severity_category, c1_input.disease_label)
+
+        # Step 6: Log observation
+        self.db.insert_record(
+            plant_id=c1_input.plant_id,
+            zone_id=c1_input.zone_id,
+            leaf_id=c1_input.leaf_id,
+            observation_date=c1_input.observation_date,
+            disease_label=c1_input.disease_label.value,
+            scope_pct=morph_feats.scope_pct,
+            impact_score=impact_score,
+            stover_grade=stover_grade,
+            urgency_score=urgency,
+            severity_score=severity_score,
+            severity_category=severity_category.value,
+            fusion_method=fusion_method
+        )
+
+        # Step 7: Temporal trajectory
+        history = self.db.get_plant_history(c1_input.plant_id)
+        dates = [r["observation_date"] for r in history]
+        severities = [float(r["severity_score"]) for r in history]
+
+        trend_results = calculate_ols_trend(dates, severities)
+        progression_trend = trend_results["progression_trend"]
+        weekly_rate = trend_results["weekly_rate_of_change"]
+        confidence_flag = trend_results["confidence_flag"]
+
+        if len(history) == 1:
+            forecast_7d_score = None
+            forecast_7d_category = None
+        elif len(history) == 2:
+            forecast_7d_score = trend_results["forecast_7d_score"]
+            forecast_7d_category = trend_results["forecast_7d_category"]
+        else:
+            forecast_7d_score, forecast_7d_category = self.gru_forecaster.predict_7d(history)
+
+        output = Component4Output(
+            plant_id=c1_input.plant_id,
+            zone_id=c1_input.zone_id,
+            observation_date=c1_input.observation_date,
+            disease_label=c1_input.disease_label,
+            scope_pct=morph_feats.scope_pct,
+            impact_score=impact_score,
+            stover_grade=stover_grade,
+            urgency_score=urgency,
+            severity_score=severity_score,
+            severity_category=severity_category,
+            fusion_method_used=fusion_method,
+            progression_trend=progression_trend,
+            weekly_rate_of_change=weekly_rate,
+            forecast_7d_score=forecast_7d_score,
+            forecast_7d_category=forecast_7d_category,
+            confidence_flag=confidence_flag,
+            recommended_action=recommended_action
+        )
+
+        # Step 8: Encode base64 image and colorized mask
+        pil_img = Image.fromarray(rgb_image)
+        buf_img = io.BytesIO()
+        pil_img.save(buf_img, format="JPEG", quality=90)
+        img_b64 = base64.b64encode(buf_img.getvalue()).decode("utf-8")
+
+        # RGBA Colorized Mask
+        mask_rgba = np.zeros((256, 256, 4), dtype=np.uint8)
+        mask_rgba[pred_mask == 1] = [16, 185, 129, 170]  # Emerald green (healthy lamina)
+        mask_rgba[pred_mask == 2] = [239, 68, 68, 220]   # Crimson/amber (lesions)
+        pil_mask = Image.fromarray(mask_rgba, mode="RGBA")
+        buf_mask = io.BytesIO()
+        pil_mask.save(buf_mask, format="PNG")
+        mask_b64 = base64.b64encode(buf_mask.getvalue()).decode("utf-8")
+
+        return {
+            "assessment": output.model_dump(),
+            "image_base64": f"data:image/jpeg;base64,{img_b64}",
+            "mask_base64": f"data:image/png;base64,{mask_b64}",
+            "morphometrics": {
+                "scope_pct": round(morph_feats.scope_pct, 2),
+                "num_lesions": int(morph_feats.num_lesions),
+                "coalescence_ratio_pct": round(morph_feats.coalescence_ratio_pct, 2),
+                "leaf_aspect_ratio": round(morph_feats.leaf_aspect_ratio, 2),
+                "morph_distortion_idx": round(morph_feats.morph_distortion_idx, 2)
+            },
+            "fusion_comparison": {
+                "F_hybrid": round(float(f_hybrid), 2),
+                "F_XGB": round(float(f_xgb), 2),
+                "F_WS": round(float(f_ws), 2),
+                "F_mult": round(float(f_mult), 2)
+            },
+            "history": history
+        }
+

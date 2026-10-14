@@ -15,6 +15,7 @@ data/processed/
 data/synthetic/
 data/real_seg/
 data/processed_masks/
+data/uploads/
 scratch/
 *.log
 *conv*.txt
