@@ -26,6 +26,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source and configuration
 COPY configs/ /app/configs/
 COPY src/ /app/src/
+COPY scripts/ /app/scripts/
 COPY results/ /app/results/
 COPY data/ /app/data/
 
