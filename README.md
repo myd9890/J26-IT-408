@@ -63,33 +63,42 @@ banana_severity_c3/
 ├── configs/
 │   └── config.yaml              # Hyperparameters, scale boundaries, model configs
 ├── src/
+│   ├── features/                # Domain feature engineering & vectorization
+│   │   ├── morphometrics.py     # OpenCV lesion/leaf geometry & distortion index
+│   │   ├── impact_scales.py     # Stover-Gauhl, Cordana HB, BBTV impact scales
+│   │   └── vector_builder.py    # 8-D XGBoost vectors & 5-D sliding GRU sequences
+│   ├── models/                  # Pure model architectures & definitions
+│   │   ├── segmentation/        # U-Net PyTorch & ClassicalSegmenter baselines
+│   │   ├── severity/            # XGBoostSeverityEngine & hybrid damped fusion formulas
+│   │   └── temporal/            # SeverityGRU recurrent forecaster & OLS trend
+│   ├── training/                # Training routines, loops, and loss functions
+│   │   ├── losses.py            # CombinedDiceCrossEntropyLoss & SoftDiceLoss
+│   │   ├── seg_trainer.py       # U-Net segmentation trainer
+│   │   ├── xgb_trainer.py       # XGBoost severity trainer
+│   │   └── gru_trainer.py       # PyTorch GRU recurrent trainer
+│   ├── inference/               # Production serving & inference pipelines
+│   │   ├── orchestrator.py      # Component3Orchestrator pipeline coordinator
+│   │   ├── database.py          # SeverityDatabase SQLite longitudinal store
+│   │   └── predictors.py        # GRUProgressionForecaster & predictor wrappers
+│   ├── evaluation/              # Metrics, statistical tests & benchmark tables
+│   │   ├── metrics.py           # Segmentation IoU, Dice, Precision, Recall
+│   │   ├── expert_simulator.py  # Human visual error simulator & Spearman ablation
+│   │   └── tables.py            # Tables 1-4 benchmark generators
+│   ├── api/                     # REST API microservice layer
+│   │   ├── app.py               # FastAPI endpoints & lifecycle
+│   │   ├── schemas.py           # API request/response contracts
+│   │   └── presets.py           # Preset evaluation fixtures
+│   ├── data/                    # Data loaders, adapters & synthetic generator
+│   │   ├── dataset.py           # BananaSegmentationDataset & plant-level splitter
+│   │   ├── public_adapter.py    # Public dataset taxonomy mapper
+│   │   └── synthetic_generator.py # 120-plant longitudinal cohort simulator
 │   ├── schemas/
 │   │   └── contracts.py         # Pydantic v2 data contracts (C1, C2, C3, C4)
-│   ├── data/
-│   │   ├── public_adapter.py    # Public dataset taxonomy mapper & ExG/CIELAB pseudo-masks
-│   │   ├── synthetic_generator.py # 120-plant longitudinal cohort simulator (720 records)
-│   │   └── dataset.py           # Plant-level 70/15/15 splitter & PyTorch Dataset
-│   ├── segmentation/
-│   │   ├── classical_baseline.py # ExG + CIELAB + Otsu + contour-filling baseline
-│   │   ├── unet.py              # 3-class PyTorch U-Net architecture
-│   │   ├── loss_and_metrics.py  # Combined Dice-CE loss & per-class IoU/Dice metrics
-│   │   ├── scope_calculator.py  # OpenCV morphometrics (Scope %, Coalescence, Aspect Ratio)
-│   │   └── train_seg.py         # U-Net training loop and checkpointing
-│   ├── severity/
-│   │   ├── impact_calculators.py # Stover-Gauhl, Cordana HB, and BBTV impact engines
-│   │   ├── fusion_strategies.py # Multimodal fusion formulas & 4-tier category mapping
-│   │   └── xgboost_engine.py    # 8-D feature vector XGBoost regressor & classifier
-│   ├── temporal/
-│   │   ├── database.py          # SQLite temporal store (severity_history.db)
-│   │   ├── trend_classifier.py  # OLS weekly slope (β_7d) & cold-start progression logic
-│   │   └── gru_forecaster.py    # PyTorch GRU 7-day recurrent forecaster
-│   ├── pipeline/
-│   │   └── c3_orchestrator.py   # Master pipeline connecting all FR1–FR11
-│   ├── api/
-│   │   └── app.py               # FastAPI microservice endpoints
-│   └── evaluation/
-│       ├── expert_simulator.py  # Human visual error simulator & Spearman evaluator
-│       └── run_all_benchmarks.py# Automated thesis Table 1-4 & Figure 1-4 generator
+│   └── (segmentation, severity, temporal, pipeline) # Backward-compatibility facades
+├── scripts/                     # Standalone CLI entrypoints for workflows
+│   ├── train/                   # train_segmentation.py, train_xgboost.py, train_gru.py
+│   ├── evaluate/                # run_benchmarks.py, generate_figures.py
+│   └── data/                    # download_mendeley.py, extract_roboflow.py, etc.
 ├── tests/
 │   ├── test_functional_reqs.py  # 11-point functional requirement test suite
 │   ├── test_phase2_verification.py
