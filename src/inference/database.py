@@ -75,28 +75,52 @@ class SeverityDatabase:
         stover_grade: Optional[int] = None
     ) -> int:
         """
-        Inserts a new observation record into the database.
+        Inserts or updates an observation record in the database for the given plant and observation date.
 
         Returns:
-            The generated integer record ID.
+            The generated or updated integer record ID.
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO severity_records (
+                SELECT id FROM severity_records
+                WHERE plant_id = ? AND observation_date = ?
+                ORDER BY id DESC LIMIT 1
+            """, (plant_id, observation_date))
+            existing = cursor.fetchone()
+            if existing:
+                rec_id = existing[0]
+                cursor.execute("""
+                    UPDATE severity_records
+                    SET zone_id = ?, leaf_id = ?, disease_label = ?, scope_pct = ?,
+                        impact_score = ?, stover_grade = ?, urgency_score = ?,
+                        severity_score = ?, severity_category = ?, fusion_method = ?,
+                        created_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (
+                    zone_id, leaf_id, disease_label, float(scope_pct), float(impact_score),
+                    stover_grade if stover_grade is not None else None,
+                    float(urgency_score), float(severity_score),
+                    severity_category, fusion_method, rec_id
+                ))
+                conn.commit()
+                return rec_id
+            else:
+                cursor.execute("""
+                    INSERT INTO severity_records (
+                        plant_id, zone_id, leaf_id, observation_date,
+                        disease_label, scope_pct, impact_score, stover_grade,
+                        urgency_score, severity_score, severity_category, fusion_method
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
                     plant_id, zone_id, leaf_id, observation_date,
-                    disease_label, scope_pct, impact_score, stover_grade,
-                    urgency_score, severity_score, severity_category, fusion_method
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                plant_id, zone_id, leaf_id, observation_date,
-                disease_label, float(scope_pct), float(impact_score),
-                stover_grade if stover_grade is not None else None,
-                float(urgency_score), float(severity_score),
-                severity_category, fusion_method
-            ))
-            conn.commit()
-            return cursor.lastrowid
+                    disease_label, float(scope_pct), float(impact_score),
+                    stover_grade if stover_grade is not None else None,
+                    float(urgency_score), float(severity_score),
+                    severity_category, fusion_method
+                ))
+                conn.commit()
+                return cursor.lastrowid
 
     def get_plant_history(
         self,
@@ -105,6 +129,7 @@ class SeverityDatabase:
     ) -> List[Dict[str, Any]]:
         """
         Retrieves chronological history for a specific plant_id, ordered by observation_date ASC.
+        Deduplicates by observation_date so each date has a single latest record.
 
         Args:
             plant_id: Plant identifier string.
@@ -119,7 +144,11 @@ class SeverityDatabase:
                 cursor.execute("""
                     SELECT * FROM (
                         SELECT * FROM severity_records
-                        WHERE plant_id = ?
+                        WHERE id IN (
+                            SELECT MAX(id) FROM severity_records
+                            WHERE plant_id = ?
+                            GROUP BY observation_date
+                        )
                         ORDER BY observation_date DESC
                         LIMIT ?
                     ) ORDER BY observation_date ASC
@@ -127,7 +156,11 @@ class SeverityDatabase:
             else:
                 cursor.execute("""
                     SELECT * FROM severity_records
-                    WHERE plant_id = ?
+                    WHERE id IN (
+                        SELECT MAX(id) FROM severity_records
+                        WHERE plant_id = ?
+                        GROUP BY observation_date
+                    )
                     ORDER BY observation_date ASC
                 """, (plant_id,))
 
@@ -138,7 +171,7 @@ class SeverityDatabase:
         """Returns the number of historical records recorded for this plant."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM severity_records WHERE plant_id = ?", (plant_id,))
+            cursor.execute("SELECT COUNT(DISTINCT observation_date) FROM severity_records WHERE plant_id = ?", (plant_id,))
             return cursor.fetchone()[0]
 
     def clear_records(self):

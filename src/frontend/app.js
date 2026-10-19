@@ -9,6 +9,7 @@ const state = {
   activePreset: null,
   customImageBase64: null,
   currentAssessment: null,
+  currentHistory: null,
   currentImpactScore: 50.0,
   maskOpacity: 0.85,
   selectedFusionStrategy: 'F_hybrid',
@@ -29,6 +30,7 @@ const elements = {
   disease: document.getElementById('input-disease'),
   confidence: document.getElementById('input-confidence'),
   imagePath: document.getElementById('input-image-path'),
+  obsDate: document.getElementById('input-obs-date'),
   urgencySlider: document.getElementById('input-urgency'),
   urgencyDisplay: document.getElementById('urgency-val-display'),
   dropzone: document.getElementById('upload-dropzone'),
@@ -151,6 +153,12 @@ function renderPresetsCarousel() {
         <span class="preset-badge">${preset.badge || 'Sample'}</span>
       </div>
       <p class="preset-desc">${preset.description}</p>
+      <div class="preset-meta-row">
+        <span class="preset-meta-pill" title="Plant Identifier & Zone">🆔 <strong>${preset.plant_id}</strong> (${preset.zone_id})</span>
+        <span class="preset-meta-pill" title="Observation Date">📅 ${preset.observation_date}</span>
+        <span class="preset-meta-pill" title="Microclimate Urgency Score">⚡ <strong>${preset.urgency_score}%</strong> Urgency</span>
+        <span class="preset-meta-pill" title="Weather Conditions">🌡️ ${preset.temperature_c}°C · 💧 ${preset.relative_humidity_pct}% · 🍃 ${preset.leaf_wetness_hours}h</span>
+      </div>
     `;
     card.addEventListener('click', () => selectPreset(preset));
     elements.presetsContainer.appendChild(card);
@@ -176,6 +184,9 @@ function selectPreset(preset) {
   elements.confidence.value = preset.disease_confidence || 0.95;
   elements.imagePath.value = preset.image_path;
   elements.dropFilename.textContent = `Preset: ${preset.image_path.split('/').pop()}`;
+  if (elements.obsDate) {
+    elements.obsDate.value = preset.observation_date || '2026-09-29';
+  }
 
   elements.urgencySlider.value = preset.urgency_score;
   elements.urgencyDisplay.textContent = `${preset.urgency_score}%`;
@@ -246,6 +257,13 @@ function setupEventListeners() {
   elements.labSlider.addEventListener('input', (e) => {
     updateZeroCollapseLab(parseFloat(e.target.value));
   });
+
+  // Responsive redraw for Timeline progression chart
+  window.addEventListener('resize', () => {
+    if (state.currentHistory && state.currentAssessment) {
+      drawTimelineChart(state.currentHistory, state.currentAssessment.assessment || state.currentAssessment);
+    }
+  });
 }
 
 /**
@@ -281,20 +299,21 @@ async function runAssessment() {
   const imagePath = elements.imagePath.value;
   const urgency = parseFloat(elements.urgencySlider.value) || 0.0;
   const today = new Date().toISOString().split('T')[0];
+  const obsDate = (elements.obsDate && elements.obsDate.value) ? elements.obsDate.value : (state.activePreset?.observation_date || today);
 
   const payload = {
     vision_input: {
       plant_id: plantId,
       zone_id: zoneId,
       leaf_id: 'LEAF_01',
-      observation_date: today,
+      observation_date: obsDate,
       disease_label: disease,
       disease_confidence: confidence,
       image_path: imagePath,
     },
     environmental_input: {
       zone_id: zoneId,
-      observation_date: today,
+      observation_date: obsDate,
       urgency_score: urgency,
     },
     fusion_method: state.selectedFusionStrategy,
@@ -315,6 +334,7 @@ async function runAssessment() {
 
     const data = await res.json();
     state.currentAssessment = data;
+    state.currentHistory = data.history;
     state.currentImpactScore = data.assessment.impact_score;
 
     // Load Images into Canvas
@@ -492,23 +512,38 @@ function drawTimelineChart(history, assessment) {
     return;
   }
 
-  const padding = { top: 20, right: 35, bottom: 25, left: 35 };
+  const padding = { top: 22, right: 38, bottom: 25, left: 35 };
   const plotW = w - padding.left - padding.right;
   const plotH = h - padding.top - padding.bottom;
 
-  // Collect historical points
-  const points = history.map(r => ({
-    date: r.observation_date,
-    score: parseFloat(r.severity_score),
-    label: r.observation_date.substring(5),
-  }));
+  // Deduplicate history by observation_date (latest record per date)
+  const dateMap = new Map();
+  history.forEach(r => {
+    const d = r.observation_date || '';
+    const score = parseFloat(r.severity_score);
+    if (!isNaN(score)) {
+      dateMap.set(d, {
+        date: d,
+        score: score,
+        label: d.length >= 10 ? d.substring(5) : d,
+      });
+    }
+  });
+
+  // Sort chronologically
+  let points = Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+  // Limit display to the most recent 7 visits to ensure spacious, readable layout
+  if (points.length > 7) {
+    points = points.slice(-7);
+  }
 
   // Add forecast point if available
   const hasForecast = assessment.forecast_7d_score !== null && assessment.forecast_7d_score !== undefined;
   if (hasForecast) {
     points.push({
       date: 'Forecast (+7d)',
-      score: assessment.forecast_7d_score,
+      score: parseFloat(assessment.forecast_7d_score),
       label: '+7d (GRU)',
       isForecast: true,
     });
@@ -527,7 +562,7 @@ function drawTimelineChart(history, assessment) {
   const getY = (val) => padding.top + plotH - (Math.min(100, Math.max(0, val)) / 100) * plotH;
 
   // Grid Lines
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
   ctx.lineWidth = 1;
   [0, 25, 50, 75, 100].forEach(tick => {
     const y = getY(tick);
@@ -536,60 +571,110 @@ function drawTimelineChart(history, assessment) {
     ctx.lineTo(w - padding.right, y);
     ctx.stroke();
 
-    ctx.fillStyle = '#475569';
+    ctx.fillStyle = '#64748b';
     ctx.font = '9px JetBrains Mono, monospace';
     ctx.textAlign = 'right';
     ctx.fillText(tick, padding.left - 6, y + 3);
   });
 
-  // Historical Solid Line
+  // Historical Area Fill & Solid Line
   const histPoints = hasForecast ? points.slice(0, -1) : points;
-  ctx.beginPath();
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = '#10b981';
-  histPoints.forEach((p, idx) => {
-    const x = getX(idx);
-    const y = getY(p.score);
-    if (idx === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
+  if (histPoints.length > 1) {
+    // Gradient Area
+    const areaGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotH);
+    areaGrad.addColorStop(0, 'rgba(5, 150, 105, 0.15)');
+    areaGrad.addColorStop(1, 'rgba(5, 150, 105, 0.0)');
+
+    ctx.beginPath();
+    histPoints.forEach((p, idx) => {
+      const x = getX(idx);
+      const y = getY(p.score);
+      if (idx === 0) {
+        ctx.moveTo(x, padding.top + plotH);
+        ctx.lineTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.lineTo(getX(histPoints.length - 1), padding.top + plotH);
+    ctx.closePath();
+    ctx.fillStyle = areaGrad;
+    ctx.fill();
+
+    // Solid Line
+    ctx.beginPath();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#059669';
+    histPoints.forEach((p, idx) => {
+      const x = getX(idx);
+      const y = getY(p.score);
+      if (idx === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
 
   // Forecast Dashed Line
-  if (hasForecast) {
+  if (hasForecast && histPoints.length > 0) {
     const lastHist = histPoints[histPoints.length - 1];
     const fcPoint = points[points.length - 1];
     ctx.beginPath();
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#60a5fa';
+    ctx.strokeStyle = '#2563eb';
     ctx.moveTo(getX(histPoints.length - 1), getY(lastHist.score));
     ctx.lineTo(getX(points.length - 1), getY(fcPoint.score));
     ctx.stroke();
     ctx.setLineDash([]);
   }
 
-  // Draw Dots & Labels
+  // Draw Dots & Value Labels
   points.forEach((p, idx) => {
     const x = getX(idx);
     const y = getY(p.score);
 
+    // Outer glow for forecast / active
+    if (p.isForecast || idx === histPoints.length - 1) {
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = p.isForecast ? 'rgba(37, 99, 235, 0.15)' : 'rgba(5, 150, 105, 0.15)';
+      ctx.fill();
+    }
+
+    // Dot
     ctx.beginPath();
     ctx.arc(x, y, p.isForecast ? 5 : 4, 0, Math.PI * 2);
-    ctx.fillStyle = p.isForecast ? '#60a5fa' : '#10b981';
+    ctx.fillStyle = p.isForecast ? '#2563eb' : '#059669';
     ctx.fill();
-    ctx.strokeStyle = '#080c14';
+    ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Value text
-    ctx.fillStyle = p.isForecast ? '#93c5fd' : '#f8fafc';
-    ctx.font = '10px JetBrains Mono, monospace';
+    // Text Label with light pill backdrop for maximum legibility
+    const valText = p.score.toFixed(1);
+    ctx.font = 'bold 10px JetBrains Mono, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(p.score.toFixed(1), x, y - 8);
+
+    const textY = y < 28 ? y + 16 : y - 8;
+    const textW = ctx.measureText(valText).width;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(x - textW / 2 - 4, textY - 9, textW + 8, 12, 3);
+    } else {
+      ctx.fillRect(x - textW / 2 - 4, textY - 9, textW + 8, 12);
+    }
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(203, 213, 225, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = p.isForecast ? '#1d4ed8' : '#0f172a';
+    ctx.fillText(valText, x, textY);
 
     // X-axis label
-    ctx.fillStyle = p.isForecast ? '#60a5fa' : '#64748b';
+    ctx.fillStyle = p.isForecast ? '#2563eb' : '#64748b';
     ctx.font = '9px Inter, sans-serif';
     ctx.fillText(p.label, x, h - 8);
   });

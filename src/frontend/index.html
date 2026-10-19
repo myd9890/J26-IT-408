@@ -70,8 +70,8 @@
 
         <form id="assessment-form" onsubmit="return false;">
           
-          <!-- Plant & Zone Identifiers -->
-          <div class="form-row dual-fields">
+          <!-- Plant, Zone & Date Identifiers -->
+          <div class="form-row triple-fields">
             <div class="form-group">
               <label for="input-plant-id">Plant ID</label>
               <input type="text" id="input-plant-id" value="REAL_PLANT_TR_001" required>
@@ -84,6 +84,10 @@
                 <option value="ZONE_C">ZONE C (Ridge Plot)</option>
                 <option value="ZONE_D">ZONE D (South Plot)</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label for="input-obs-date">Inspection Date</label>
+              <input type="date" id="input-obs-date" value="2026-09-29">
             </div>
           </div>
 
@@ -122,7 +126,7 @@
           <!-- Component 2 Microclimate Urgency Slider -->
           <div class="form-group slider-group">
             <div class="slider-header">
-              <label for="input-urgency">C2 Weather Urgency ($U$)</label>
+              <label for="input-urgency">C2 Weather Urgency (<em>U</em>)</label>
               <span class="slider-val" id="urgency-val-display">75%</span>
             </div>
             <input type="range" id="input-urgency" min="0" max="100" value="75" class="custom-slider">
@@ -168,155 +172,158 @@
 
       <!-- COLUMN 2: U-Net Semantic Segmentation & Morphometrics -->
       <section class="panel glass-card col-segmentation" aria-label="Visual Segmentation">
-        <div class="panel-header">
-          <div class="panel-title-wrap">
-            <span class="panel-step">02</span>
-            <h2>Semantic Segmentation</h2>
-          </div>
-          <span class="panel-tag highlight-green">U-Net 3-Class (FR2)</span>
-        </div>
-
-        <!-- Dual Canvas Viewer -->
-        <div class="viewer-container">
-          <div class="canvas-viewport" id="viewport-box">
-            <canvas id="view-canvas" width="256" height="256"></canvas>
-            <div class="canvas-loader" id="canvas-loader" style="display: none;">
-              <div class="pulse-ring"></div>
-              <span>Segmenting foliar contours...</span>
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-step">02</span>
+              <h2>Semantic Segmentation</h2>
             </div>
+            <span class="panel-tag highlight-green">U-Net 3-Class (FR2)</span>
           </div>
 
-          <!-- Mask Opacity Slider -->
-          <div class="opacity-control-bar">
-            <div class="slider-header-sm">
-              <label for="mask-opacity-slider">Segmentation Overlay Blend</label>
-              <span id="opacity-label">85% Mask</span>
+          <!-- Dual Canvas Viewer -->
+          <div class="viewer-container">
+            <div class="canvas-viewport" id="viewport-box">
+              <canvas id="view-canvas" width="256" height="256"></canvas>
+              <div class="canvas-loader" id="canvas-loader" style="display: none;">
+                <div class="pulse-ring"></div>
+                <span>Segmenting foliar contours...</span>
+              </div>
             </div>
-            <input type="range" id="mask-opacity-slider" min="0" max="100" value="85" class="custom-slider sm">
-            <div class="opacity-markers">
-              <span>0% (Raw Leaf)</span>
-              <span>50% (Blend)</span>
-              <span>100% (Mask Only)</span>
+
+            <!-- Mask Controls: Opacity & Legend -->
+            <div class="viewer-controls">
+              <!-- Mask Opacity Slider -->
+              <div class="opacity-control-bar">
+                <div class="slider-header-sm">
+                  <label for="mask-opacity-slider">Segmentation Overlay Blend</label>
+                  <span id="opacity-label">85% Mask</span>
+                </div>
+                <input type="range" id="mask-opacity-slider" min="0" max="100" value="85" class="custom-slider sm">
+                <div class="opacity-markers">
+                  <span>0% (Raw Leaf)</span>
+                  <span>50% (Blend)</span>
+                  <span>100% (Mask Only)</span>
+                </div>
+              </div>
+
+              <!-- Mask Color Legend -->
+              <div class="mask-legend">
+                <div class="legend-item">
+                  <span class="legend-swatch swatch-green"></span>
+                  <span class="legend-text">Healthy Lamina</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch swatch-crimson"></span>
+                  <span class="legend-text">Necrotic Lesion</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch swatch-bg"></span>
+                  <span class="legend-text">Background</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Mask Color Legend -->
-          <div class="mask-legend">
-            <div class="legend-item">
-              <span class="legend-swatch swatch-green"></span>
-              <span class="legend-text">Healthy Lamina</span>
+          <!-- Extracted Morphometrics Strip (FR3) -->
+          <div class="morphometrics-grid">
+            <div class="morpho-card">
+              <span class="morpho-label">Foliar Scope</span>
+              <span class="morpho-val" id="morph-scope">--%</span>
+              <span class="morpho-sub">Necrotic Ratio</span>
             </div>
-            <div class="legend-item">
-              <span class="legend-swatch swatch-crimson"></span>
-              <span class="legend-text">Necrotic Lesion</span>
+            <div class="morpho-card">
+              <span class="morpho-label">Lesion Count</span>
+              <span class="morpho-val" id="morph-lesions">--</span>
+              <span class="morpho-sub">Distinct Contours</span>
             </div>
-            <div class="legend-item">
-              <span class="legend-swatch swatch-bg"></span>
-              <span class="legend-text">Background</span>
+            <div class="morpho-card">
+              <span class="morpho-label">Coalescence</span>
+              <span class="morpho-val" id="morph-coalescence">--%</span>
+              <span class="morpho-sub">Merged Streaks</span>
+            </div>
+            <div class="morpho-card">
+              <span class="morpho-label">Aspect Ratio</span>
+              <span class="morpho-val" id="morph-aspect">--</span>
+              <span class="morpho-sub">L / W Metric</span>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Extracted Morphometrics Strip (FR3) -->
-        <div class="morphometrics-grid">
-          <div class="morpho-card">
-            <span class="morpho-label">Foliar Scope</span>
-            <span class="morpho-val" id="morph-scope">--%</span>
-            <span class="morpho-sub">Necrotic Ratio</span>
+        <!-- COLUMN 3: Decision Support & Longitudinal Forecast -->
+        <section class="panel glass-card col-decision" aria-label="Decision Support">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-step">03</span>
+              <h2>Decision &amp; Forecasting</h2>
+            </div>
+            <span class="panel-tag highlight-blue">GRU Forecaster (FR10)</span>
           </div>
-          <div class="morpho-card">
-            <span class="morpho-label">Lesion Count</span>
-            <span class="morpho-val" id="morph-lesions">--</span>
-            <span class="morpho-sub">Distinct Contours</span>
-          </div>
-          <div class="morpho-card">
-            <span class="morpho-label">Coalescence</span>
-            <span class="morpho-val" id="morph-coalescence">--%</span>
-            <span class="morpho-sub">Merged Streaks</span>
-          </div>
-          <div class="morpho-card">
-            <span class="morpho-label">Aspect Ratio</span>
-            <span class="morpho-val" id="morph-aspect">--</span>
-            <span class="morpho-sub">L / W Metric</span>
-          </div>
-        </div>
-      </section>
 
-      <!-- COLUMN 3: Decision Support & Longitudinal Forecast -->
-      <section class="panel glass-card col-decision" aria-label="Decision Support">
-        <div class="panel-header">
-          <div class="panel-title-wrap">
-            <span class="panel-step">03</span>
-            <h2>Decision &amp; Forecasting</h2>
-          </div>
-          <span class="panel-tag highlight-blue">GRU Forecaster (FR10)</span>
-        </div>
-
-        <!-- Severity Score Ring & Category Badge -->
-        <div class="severity-summary-card">
-          <div class="score-circle-wrap">
-            <svg class="score-ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
-              <circle class="ring-fg" id="score-ring-bar" cx="60" cy="60" r="50" stroke-dasharray="314.15" stroke-dashoffset="314.15"></circle>
-            </svg>
-            <div class="score-number-inside">
-              <span class="score-val" id="score-val-large">--</span>
-              <span class="score-unit">/ 100</span>
+          <!-- Severity Score Ring & Category Badge -->
+          <div class="severity-summary-card">
+            <div class="score-circle-wrap">
+              <svg class="score-ring-svg" viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+                <circle class="ring-fg" id="score-ring-bar" cx="60" cy="60" r="50" stroke-dasharray="314.15" stroke-dashoffset="314.15"></circle>
+              </svg>
+              <div class="score-number-inside">
+                <span class="score-val" id="score-val-large">--</span>
+                <span class="score-unit">/ 100</span>
+              </div>
+            </div>
+            
+            <div class="severity-meta">
+              <div class="category-badge badge-neutral" id="category-badge">Awaiting Run</div>
+              <div class="standard-scale-pill" id="stover-grade-pill">Stover-Gauhl: Grade --</div>
+              <div class="impact-breakdown-sub" id="impact-sub">Biological Impact: -- · Urgency: --</div>
             </div>
           </div>
-          
-          <div class="severity-meta">
-            <div class="category-badge badge-neutral" id="category-badge">Awaiting Run</div>
-            <div class="standard-scale-pill" id="stover-grade-pill">Stover-Gauhl: Grade --</div>
-            <div class="impact-breakdown-sub" id="impact-sub">Biological Impact: -- · Urgency: --</div>
-          </div>
-        </div>
 
-        <!-- Actionable Agronomic Prescription (FR7, FR11) -->
-        <div class="prescription-card">
-          <div class="card-title-row">
-            <span class="rx-icon">📋</span>
-            <span class="rx-heading">Prescribed Intervention Protocol</span>
+          <!-- Actionable Agronomic Prescription (FR7, FR11) -->
+          <div class="prescription-card">
+            <div class="card-title-row">
+              <span class="rx-icon">📋</span>
+              <span class="rx-heading">Prescribed Intervention Protocol</span>
+            </div>
+            <p class="prescription-text" id="prescription-text">
+              Execute assessment to generate precision intervention instructions for Component 4.
+            </p>
           </div>
-          <p class="prescription-text" id="prescription-text">
-            Execute assessment to generate precision intervention instructions for Component 4.
-          </p>
-        </div>
 
-        <!-- 7-Day GRU Forecast Metric Card -->
-        <div class="forecast-card">
-          <div class="forecast-header">
-            <span class="fc-icon">🔮</span>
-            <span class="fc-title">7-Day Progression Forecast</span>
-            <span class="fc-confidence" id="confidence-flag-pill">Confidence: --</span>
-          </div>
-          <div class="forecast-body">
-            <div class="fc-stat">
-              <span class="fc-label">Projected Severity</span>
-              <span class="fc-val" id="forecast-score-val">--</span>
+          <!-- 7-Day GRU Forecast Metric Card -->
+          <div class="forecast-card">
+            <div class="forecast-header">
+              <span class="fc-icon">🔮</span>
+              <span class="fc-title">7-Day Progression Forecast</span>
+              <span class="fc-confidence" id="confidence-flag-pill">Confidence: --</span>
             </div>
-            <div class="fc-stat">
-              <span class="fc-label">Projected Category</span>
-              <span class="fc-val-cat" id="forecast-cat-val">--</span>
-            </div>
-            <div class="fc-stat">
-              <span class="fc-label">Trajectory Trend</span>
-              <span class="fc-trend" id="progression-trend-val">--</span>
+            <div class="forecast-body">
+              <div class="fc-stat">
+                <span class="fc-label">Projected Severity</span>
+                <span class="fc-val" id="forecast-score-val">--</span>
+              </div>
+              <div class="fc-stat">
+                <span class="fc-label">Projected Category</span>
+                <span class="fc-val-cat" id="forecast-cat-val">--</span>
+              </div>
+              <div class="fc-stat">
+                <span class="fc-label">Trajectory Trend</span>
+                <span class="fc-trend" id="progression-trend-val">--</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Longitudinal Trajectory Timeline Chart -->
-        <div class="chart-container">
-          <div class="chart-header">
-            <span class="chart-title">Longitudinal Timeline &amp; Projection</span>
-            <span class="chart-rate" id="weekly-rate-pill">Rate: -- pts/7d</span>
+          <!-- Longitudinal Trajectory Timeline Chart -->
+          <div class="chart-container">
+            <div class="chart-header">
+              <span class="chart-title">Longitudinal Timeline &amp; Projection</span>
+              <span class="chart-rate" id="weekly-rate-pill">Rate: -- pts/7d</span>
+            </div>
+            <div class="canvas-chart-wrap">
+              <canvas id="timeline-chart" width="360" height="150"></canvas>
+            </div>
           </div>
-          <div class="canvas-chart-wrap">
-            <canvas id="timeline-chart" width="360" height="150"></canvas>
-          </div>
-        </div>
-      </section>
+        </section>
 
     </main>
 
@@ -327,7 +334,7 @@
           <span class="lab-badge">SCIENTIFIC INNOVATION SHOWCASE</span>
           <h3>Zero-Collapse Stress Test Simulator</h3>
           <p class="lab-subtitle">
-            Demonstrates how our <strong>Damped Multiplicative Hybrid ($F_{\text{hybrid}}$)</strong> avoids catastrophic false-negative diagnosis when environmental urgency $U \to 0$.
+            Demonstrates how our <strong>Damped Multiplicative Hybrid (<em>F</em><sub>hybrid</sub>)</strong> avoids catastrophic false-negative diagnosis when environmental urgency <em>U</em> &rarr; 0.
           </p>
         </div>
         <div class="lab-slider-unit">
@@ -341,7 +348,7 @@
         <!-- Multiplicative Collapse Bar -->
         <div class="lab-card card-fail">
           <div class="lab-card-top">
-            <span class="method-tag tag-crimson">Unconstrained Multiplicative ($F_{\text{mult}}$)</span>
+            <span class="method-tag tag-crimson">Unconstrained Multiplicative (<em>F</em><sub>mult</sub>)</span>
             <span class="failure-indicator" id="fmult-status-tag">⚠️ CATASTROPHIC COLLAPSE</span>
           </div>
           <div class="bar-track">
@@ -352,14 +359,14 @@
             <strong id="lab-fmult-val">0.0 / 100</strong>
           </div>
           <p class="lab-critique">
-            When weather transmission drops to zero ($U=0$), pure multiplication crashes to 0% severity regardless of visible necrosis—a lethal false negative in plant pathology.
+            When weather transmission drops to zero (<em>U</em> = 0%), pure multiplication crashes to 0% severity regardless of visible necrosis&mdash;a lethal false negative in plant pathology.
           </p>
         </div>
 
         <!-- Damped Hybrid Safe Bar -->
         <div class="lab-card card-safe">
           <div class="lab-card-top">
-            <span class="method-tag tag-emerald">Damped Multiplicative Hybrid ($F_{\text{hybrid}}$)</span>
+            <span class="method-tag tag-emerald">Damped Multiplicative Hybrid (<em>F</em><sub>hybrid</sub>)</span>
             <span class="safe-indicator" id="fhybrid-status-tag">✅ 70% BIOLOGICAL FLOOR PRESERVED</span>
           </div>
           <div class="bar-track">
@@ -382,7 +389,7 @@
     <!-- Footer -->
     <footer class="app-footer">
       <span>University ML &amp; Final-Year Project Demonstration · Component 3 Multimodal Severity Engine</span>
-      <span>Designed for Viva Evaluation &amp; Agricultural Field Deployment</span>
+     
     </footer>
 
   </div>
