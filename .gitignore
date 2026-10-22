@@ -20,3 +20,12 @@ component-1/models/*.onnx
 
 # Jupyter
 .ipynb_checkpoints/
+
+# CSV
+*.csv
+
+# json
+*.json
+
+# images
+*.png

@@ -20,9 +20,9 @@ Image Input
 
 ## Deployment
 
-The computationally intensive vision and AI models will be hosted in a cloud environment.
+The computationally intensive vision model will be hosted in a cloud environment.
 
-The Raspberry Pi 4 will act as an edge device for image acquisition, communication, and interaction with the cloud-based AI service.
+The Raspberry Pi 4 will act as an edge device for communication, and interaction with the cloud-based AI service and the backend.
 
 ## Current Status
 
