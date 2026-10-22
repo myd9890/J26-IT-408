@@ -21,11 +21,5 @@ component-1/models/*.onnx
 # Jupyter
 .ipynb_checkpoints/
 
-# CSV
-*.csv
-
-# json
-*.json
-
-# images
-*.png
+# Generated Component 1 results
+component-1/results/
