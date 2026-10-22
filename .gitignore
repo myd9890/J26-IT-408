@@ -32,6 +32,10 @@ data/*.sqlite3
 
 # Model Checkpoints & Large Artifacts
 results/*.pt
+!results/unet_real_weights.pt
+!results/unet_weights.pt
+!results/gru_forecaster.pt
+!results/gru_forecaster_seed_*.pt
 results/*.pth
 results/*.onnx
 results/*.pkl
