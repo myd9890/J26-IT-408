@@ -1,0 +1,9 @@
+Feature_Code,Feature_Name,Agronomic_Description,Gain_Importance,Split_Weight,Sample_Cover,Relative_Gain_Pct
+f0,impact_score,Biological Impact (I),701.3388,1034,63.98,69.5
+f1,scope_pct,Foliar Necrosis Scope % (S),129.4919,1373,61.91,12.83
+f3,disease_id,Pathogen Class ID,97.1293,134,42.01,9.63
+f4,num_lesions,Lesion Count,49.4355,470,63.36,4.9
+f5,coalescence_ratio_pct,Lesion Coalescence Ratio %,9.9817,716,73.84,0.99
+f2,urgency_score,Environmental Urgency (U),9.0823,2192,68.01,0.9
+f6,morph_distortion_idx,Morphological Distortion Index,7.0629,766,79.46,0.7
+f7,leaf_aspect_ratio,Leaf Aspect Ratio (L/W),5.5558,202,91.5,0.55

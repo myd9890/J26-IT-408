@@ -1,0 +1,5 @@
+Fusion_Strategy,Formula_Type,Overall_RMSE,Overall_MAE,Spearman_Rho,Zero_Urgency_Collapse_Error
+Multiplicative Baseline (F_mult),Non-linear Product (I*U*S)/10000,29.9643,25.7231,0.8739,56.5
+Weighted-Sum Late Fusion (F_WS),Linear 0.45*I + 0.35*S + 0.20*U,9.4704,8.5055,0.9644,11.0
+Damped Hybrid (F_hybrid - Recommended),BioFloor*(0.70 + 0.30*U/100),3.916,2.9433,0.9724,0.0
+Learned XGBoost (F_XGB),Gradient Boosted Trees (8-D),4.4526,3.445,0.9617,11.71

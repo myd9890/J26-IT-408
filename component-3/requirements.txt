@@ -1,0 +1,33 @@
+# Component 3: Multimodal Disease Severity Assessment & Temporal Progression Forecasting
+# Core Dependencies (Pinned for exact reproducibility)
+
+# Deep Learning & ML
+torch==2.14.1
+torchvision==0.29.1
+xgboost==3.2.0
+scikit-learn==1.7.2
+
+# Scientific Computing
+numpy==2.2.6
+pandas==2.3.3
+scipy==1.15.3
+
+# Computer Vision
+opencv-python-headless==5.0.0.93
+Pillow==12.3.0
+
+# API Framework
+fastapi==0.143.2
+uvicorn==0.54.0
+pydantic==2.14.1
+
+# Configuration
+pyyaml==6.0.3
+
+# Visualization
+matplotlib==3.10.9
+seaborn==0.13.2
+
+# Testing
+pytest==9.1.1
+httpx==0.28.1

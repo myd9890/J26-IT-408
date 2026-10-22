@@ -1,0 +1,89 @@
+# =============================================================================
+# Component 3: Git Ignore Rules
+# =============================================================================
+
+# Project Planning & Internal Task Trackers (Per User Request)
+implementation_plan.md
+task_list.md
+*plan*.md
+*task_list*.md
+dataset_analysis.md
+
+# Large Datasets & Raw Media Archives
+data/raw/
+data/processed/
+data/synthetic/
+data/real_seg/
+data/processed_masks/
+data/uploads/
+scratch/
+*.log
+*conv*.txt
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.7z
+
+# Databases
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Model Checkpoints & Large Artifacts
+results/*.pt
+!results/unet_real_weights.pt
+!results/unet_weights.pt
+!results/gru_forecaster.pt
+!results/gru_forecaster_seed_*.pt
+results/*.pth
+results/*.onnx
+results/*.pkl
+results/*.joblib
+results/*.bin
+
+# Python Bytecode & Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# IDE & OS Artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
